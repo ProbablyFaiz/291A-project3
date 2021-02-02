@@ -90,9 +90,12 @@ get '/stream/:token' do
   end
   stream(true) do |connection|
     $connected_users[decoded_username] = connection
-    starting_message_reached = request.env["HTTP_LAST-EVENT_ID"].nil?
+    starting_message_reached = request.env["HTTP_LAST_EVENT_ID"].nil?
     $events.select do |event|
-      starting_message_reached = true if event[:id] == request.env["HTTP_LAST_EVENT_ID"]
+      if event[:id] == request.env["HTTP_LAST_EVENT_ID"]
+        starting_message_reached = true
+        next false
+      end
       starting_message_reached && NEW_CONNECTION_EVENT_TYPES.include?(event[:event])
     end.each { |event| send_event connection, event, false }
     connection.callback do
