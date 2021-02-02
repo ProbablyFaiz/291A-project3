@@ -16,7 +16,7 @@ configure do
   $connected_users = Hash.new
   $events = []
 
-  $broadcast_queue = Queue.new
+  $broadcast_queue = Queue.new # Using a separate thread for broadcasting to avoid blocking other things badly
   Thread.new do
     loop do
       broadcast_event = $broadcast_queue.deq
@@ -90,7 +90,11 @@ get '/stream/:token' do
   end
   stream(true) do |connection|
     $connected_users[decoded_username] = connection
-    $events.select {|event| NEW_CONNECTION_EVENT_TYPES.include? event[:event]}.each {|event| send_event connection, event, false}
+    starting_message_reached = request.env["HTTP_LAST-EVENT-ID"].nil?
+    $events.select do |event|
+      starting_message_reached = true if event[:id] == request.env["HTTP_LAST-EVENT-ID"]
+      starting_message_reached && NEW_CONNECTION_EVENT_TYPES.include?(event[:event])
+    end.each { |event| send_event connection, event, false }
     connection.callback do
       unless found_existing_user
         $broadcast_queue << {
