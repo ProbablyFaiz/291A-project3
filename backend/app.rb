@@ -9,7 +9,7 @@ require 'dotenv/load'
 # Event: event: string, data: Hash, id: string (uuid)
 # ConnectedUser: key: string (username), value: (Sinatra connection object?)
 
-# TODO: Implement some kind of broadcast thread with a queue to avoid blocking in the main thread on sending messages etc.
+NEW_CONNECTION_EVENT_TYPES = Set.new(%w[Message ServerStatus])
 
 configure do
   $users = Hash.new
@@ -27,6 +27,14 @@ configure do
       end
     end
   end
+  $broadcast_queue << {
+      data: {
+          status: "The server is alive. It doesn't know how to feel about that.",
+          created: Time.now.to_f
+      },
+      event: "ServerStatus",
+      id: SecureRandom.uuid
+  }
 end
 
 before do
@@ -82,6 +90,7 @@ get '/stream/:token' do
   end
   stream(true) do |connection|
     $connected_users[decoded_username] = connection
+    $events.select {|event| NEW_CONNECTION_EVENT_TYPES.include? event[:event]}.each {|event| send_event connection, event, false}
     connection.callback do
       unless found_existing_user
         $broadcast_queue << {
