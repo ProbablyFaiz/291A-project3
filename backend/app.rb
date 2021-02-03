@@ -35,6 +35,23 @@ configure do
       event: "ServerStatus",
       id: SecureRandom.uuid
   }
+  EventMachine.schedule do
+    EventMachine.add_periodic_timer(15) do
+      $broadcast_queue << {
+          event: "Heartbeat"
+      }
+    end
+    EventMachine.add_periodic_timer(60 * 5) do
+      $broadcast_queue << {
+          data: {
+              status: "Rumors of the server's demise have been greatly exaggerated.",
+              created: Time.now.to_f
+          },
+          event: "ServerStatus",
+          id: SecureRandom.uuid
+      }
+    end
+  end
 end
 
 before do
@@ -152,6 +169,10 @@ post '/login' do
 end
 
 def send_event(connection, event_object, record_event = true)
+  if event_object[:event] == "Heartbeat"
+    connection << "\n"
+    return
+  end
   if record_event
     $events << event_object
     $events.shift if $events.size > 100
