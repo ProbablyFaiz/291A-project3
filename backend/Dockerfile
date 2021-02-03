@@ -1,3 +1,5 @@
+ARG PROD=0
+
 FROM ruby:3
 
 WORKDIR /app
@@ -9,4 +11,4 @@ RUN gem install bundler && \
     bundle install
 
 COPY app.rb config.ru ./
-CMD exec bundle exec thin start
+CMD exec bundle exec thin start -p 80
