@@ -6,4 +6,10 @@
 
 .userList ul {
 	list-style-type: none;
+	padding: 0;
+}
+
+.userList p {
+	font-weight: bold;
+	font-size: 20px;
 }

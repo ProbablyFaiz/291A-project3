@@ -1,6 +1,5 @@
 import React, { Component } from "react";
-//import '../css/Compose.css';
-//import { Button } from 'react-bootstrap';
+import '../css/Compose.css';
 
 class Compose extends Component {
 
@@ -8,7 +7,9 @@ class Compose extends Component {
     super(props);
     this.state = {
       url : props.url,
-      message: ""
+      message: "",
+      token: props.token,
+      formText: ""
     }
     this.handleChange = this.handleChange.bind(this);
     this.save = this.save.bind(this);
@@ -19,17 +20,20 @@ class Compose extends Component {
   }
 
   save (event) {
-    var formData = new URLSearchParams();
-    formData.append('message', this.state.message);
-
     event.preventDefault();
 
+    var formData = new FormData();
+    formData.append('message', this.state.message);
+
+    this.setState({token: this.props.token});
+
+    console.log("compose save token: " + this.state.token);
 
     fetch(/*proxyurl + */this.state.url + '/message', { //todo: change url to website
      method: 'POST',
-     headers: {'Authorization': 'Bearer ' + sessionStorage.accessToken},
+     headers: new Headers({'Authorization': 'Bearer ' + this.state.token}),
      mode: 'cors',
-     body: formData.toString()
+     body: formData
     }).then((response) => {
       if(!response.ok) throw new Error(response.status);
       else return response.json();
@@ -41,13 +45,15 @@ class Compose extends Component {
       console.log('error: ' + error);
       this.setState({ requestFailed: true });
     });
+
+    this.setState({message: ""});
   }
 
   render() {
     return (
       <div id="compose">
         <form className="message" onSubmit={this.save}>
-          <input id="messageText" type="text" onChange={this.handleChange}/>
+          <input id="messageText" type="text" value={this.state.message} onChange={this.handleChange}/>
         </form>
       </div>
     );

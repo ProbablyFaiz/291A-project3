@@ -13,7 +13,8 @@ class App extends Component {
       messages : [],
       users : [],
       displayUsersMessages : false,
-      displayLogin : true
+      displayLogin : true,
+      token : sessionStorage.accessToken || ""
     }
     this.addUser = this.addUser.bind(this);
     this.deleteUser = this.deleteUser.bind(this);
@@ -48,6 +49,7 @@ class App extends Component {
 
   saveToken(token){
     sessionStorage.accessToken = token;
+    this.setState({token: token});
   }
 
   startStream() {
@@ -134,6 +136,7 @@ class App extends Component {
     if (this.state.displayLogin)
     {
       return (<div className="App">
+                <br />
                 <h3> Disconnected. </h3>
                 <br/>
                 <LoginForm url = {this.state.url} loggedIn = {this.loggedIn} saveToken = {this.saveToken} startStream = {this.startStream}/>
@@ -141,6 +144,7 @@ class App extends Component {
     }
     return (
       <div className="App">
+        <br />
         <h3> Connected. </h3>
         <br/>
         <div className = "lists">
@@ -152,7 +156,8 @@ class App extends Component {
           </div>
         </div>
         <hr />
-        <Compose url = {this.state.url}/>
+        <Compose url = {this.state.url} token = {this.state.token}/>
+        <br /> <br />
       </div>
     );
   }

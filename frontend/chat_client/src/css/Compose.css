@@ -1,5 +1,11 @@
 .message {
-	width: 500px;
-	display: flex;
-	flex-wrap: wrap;
+
+	width: 1000px;
+}
+
+.message input {
+	width: 1000px;
+	float: left;
+  	clear: both;
+  	margin: 20px;
 }
