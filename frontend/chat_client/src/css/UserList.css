@@ -1,0 +1,9 @@
+.userList {
+	max-width: 300px;
+	/*display: flex;
+	flex-wrap: wrap;*/
+}
+
+.userList ul {
+	list-style-type: none;
+}
