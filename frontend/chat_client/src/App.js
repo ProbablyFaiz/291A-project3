@@ -66,9 +66,7 @@ class App extends Component {
     this.eventSource.addEventListener(
         "Disconnect",
         (event) => {
-            console.log("test disconnect");
             this.eventSource.close();
-            //todo: delete user from list?
             delete sessionStorage.accessToken;
             this.setState({displayLogin : true});
             this.setState({displayUsers : false});
@@ -138,14 +136,11 @@ class App extends Component {
     this.eventSource.addEventListener(
         "error",
         (event) => {
-            //todo: delete user from list?
             this.setState({reconnecting : true});
             this.setState({displayUsers : false});
             if (event.target.readyState === 2) {
                 delete sessionStorage.accessToken;
                 this.setState({displayLogin : true});
-            } else {
-                console.log("Disconnected, retrying");
             }
         },
         false

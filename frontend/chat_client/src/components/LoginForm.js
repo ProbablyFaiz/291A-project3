@@ -8,6 +8,7 @@ class LoginForm extends Component {
       url : "",
       username : "",
       password : "",
+      error: ""
     }
     this.handleChange = this.handleChange.bind(this);
     this.save = this.save.bind(this);
@@ -27,8 +28,7 @@ class LoginForm extends Component {
   }
 
   save(event) {
-    //const proxyurl = "https://cors-anywhere.herokuapp.com/";
-    //var formData = new FormData();
+    this.setState({error: ""});
     var formData = new URLSearchParams();
     formData.append('username', this.state.username);
     formData.append('password', this.state.password);
@@ -36,17 +36,18 @@ class LoginForm extends Component {
     event.preventDefault();
 
 
-    fetch(/*proxyurl + */this.state.url + '/login', { //todo: change url to website
+    fetch(this.state.url + '/login', {
      method: 'POST',
      headers: {'Content-Type':'application/x-www-form-urlencoded'},
      mode: 'cors',
      body: formData.toString()
     }).then((response) => {
-      if(!response.ok) throw new Error(response.status);
+      if(!response.ok) {
+        this.setState({error: response.status});
+      }
       else return response.json();
     })
     .then((data) => {
-      console.log("test");
       this.props.saveToken(data["token"]);
       this.props.saveURL(this.state.url);
       this.props.loggedIn();
@@ -58,9 +59,15 @@ class LoginForm extends Component {
   }
 
   render() {
+    let errorMessage;
+    if (this.state.error !== "")
+    {
+      errorMessage = <p style={{ color: 'red' }}>{this.state.error} Error</p>;
+    }
     return (
       <div id="login">
         <div>
+          {errorMessage}
           <h2>Login</h2>
           <form method="post" onSubmit={this.save}>
               <label>URL <br /><input id="url" type="text" onChange={this.handleChange}/></label>

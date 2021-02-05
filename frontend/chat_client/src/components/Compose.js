@@ -10,7 +10,8 @@ class Compose extends Component {
       message: "",
       token: props.token,
       typeable: props.typeable,
-      formText: ""
+      formText: "",
+      error: ""
     }
     this.handleChange = this.handleChange.bind(this);
     this.save = this.save.bind(this);
@@ -21,6 +22,7 @@ class Compose extends Component {
   }
 
   save (event) {
+    this.setState({error: ""});
     event.preventDefault();
 
     var formData = new FormData();
@@ -28,15 +30,15 @@ class Compose extends Component {
 
     this.setState({token: this.props.token});
 
-    console.log("compose save token: " + this.state.token);
-
-    fetch(/*proxyurl + */this.state.url + '/message', { //todo: change url to website
+    fetch(this.state.url + '/message', {
      method: 'POST',
      headers: new Headers({'Authorization': 'Bearer ' + this.state.token}),
      mode: 'cors',
      body: formData
     }).then((response) => {
-      if(!response.ok) throw new Error(response.status);
+      if(!response.ok) {
+        this.setState({error: response.status});
+      }
       else return response.json();
     })
     .then((data) => {
@@ -55,9 +57,16 @@ class Compose extends Component {
   }
 
   render() {
+    let errorMessage;
+    if (this.state.error !== "")
+    {
+      errorMessage = <p style={{ color: 'red' }}>{this.state.error} Error</p>;
+    }
+
     if (this.state.typeable) {
       return (
         <div id="compose">
+          {errorMessage}
           <form className="message" onSubmit={this.save}>
             <input id="messageText" type="text" value={this.state.message} onChange={this.handleChange}/>
           </form>
@@ -66,6 +75,7 @@ class Compose extends Component {
     }
     return (
       <div id="compose">
+        {errorMessage}
         <form className="message">
           <input id="messageText" type="text" value="Please reconnect to type a message." disabled ="disabled"/>
         </form>
