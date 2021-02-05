@@ -9,7 +9,7 @@ class App extends Component {
   constructor(props){
     super(props);
     this.state = {
-      url : sessionStorage.url || "https://chat.cs291.com",
+      url : sessionStorage.url || "http://droplet.faizsurani.com",
       messages : [],
       users : [],
       displayUsers : false,
