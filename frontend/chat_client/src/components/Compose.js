@@ -9,6 +9,7 @@ class Compose extends Component {
       url : props.url,
       message: "",
       token: props.token,
+      typeable: props.typeable,
       formText: ""
     }
     this.handleChange = this.handleChange.bind(this);
@@ -39,21 +40,34 @@ class Compose extends Component {
       else return response.json();
     })
     .then((data) => {
-      console.log("message sent successfully");
     })
     .catch((error) => {
-      console.log('error: ' + error);
       this.setState({ requestFailed: true });
     });
 
     this.setState({message: ""});
   }
 
+  componentDidUpdate(prevProps){
+    if (this.props.typeable !== prevProps.typeable) {
+      this.setState({typeable: this.props.typeable});
+    }
+  }
+
   render() {
+    if (this.state.typeable) {
+      return (
+        <div id="compose">
+          <form className="message" onSubmit={this.save}>
+            <input id="messageText" type="text" value={this.state.message} onChange={this.handleChange}/>
+          </form>
+        </div>
+      );
+    }
     return (
       <div id="compose">
-        <form className="message" onSubmit={this.save}>
-          <input id="messageText" type="text" value={this.state.message} onChange={this.handleChange}/>
+        <form className="message">
+          <input id="messageText" type="text" value="Please reconnect to type a message." disabled ="disabled"/>
         </form>
       </div>
     );

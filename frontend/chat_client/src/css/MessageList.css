@@ -1,14 +1,14 @@
 .messageList {
-	/*display: flex;
-	flex-wrap: wrap;*/
 	border: red;
 	flex: 1;
 	overflow: scroll;
-	/*overflow-y: scroll;*/
+	box-sizing: border-box;
+	border-width: 3px;
+	border-style: solid;
+	border-color: #ccccff;
 }
 
 .messageList ul {
-	border-style: round;
 	list-style-type: none;
 	text-align: left;
 	padding: 0;

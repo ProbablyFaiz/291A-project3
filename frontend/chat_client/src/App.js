@@ -9,11 +9,13 @@ class App extends Component {
   constructor(props){
     super(props);
     this.state = {
-      url : sessionStorage.url || "http://droplet.faizsurani.com",
+      url : sessionStorage.url || "https://chat.cs291.com",
       messages : [],
       users : [],
-      displayUsersMessages : false,
+      displayUsers : false,
+      displayMessages : false,
       displayLogin : true,
+      reconnecting : false,
       token : sessionStorage.accessToken || ""
     }
     this.addUser = this.addUser.bind(this);
@@ -21,6 +23,7 @@ class App extends Component {
     this.formatDate = this.formatDate.bind(this);
     this.loggedIn = this.loggedIn.bind(this);
     this.saveToken = this.saveToken.bind(this);
+    this.saveURL = this.saveURL.bind(this);
     this.startStream = this.startStream.bind(this);
   }
 
@@ -44,12 +47,17 @@ class App extends Component {
 
   loggedIn(){
     this.setState({displayLogin : false});
-    this.setState({displayUsersMessages : true});
+    this.setState({displayUsers : true});
+    this.setState({displayMessages : true});
   }
 
   saveToken(token){
     sessionStorage.accessToken = token;
     this.setState({token: token});
+  }
+
+  saveURL(url){
+    this.setState({url: url});
   }
 
   startStream() {
@@ -58,11 +66,13 @@ class App extends Component {
     this.eventSource.addEventListener(
         "Disconnect",
         (event) => {
+            console.log("test disconnect");
             this.eventSource.close();
             //todo: delete user from list?
             delete sessionStorage.accessToken;
             this.setState({displayLogin : true});
-            this.setState({displayUsersMessages : false});
+            this.setState({displayUsers : false});
+            this.setState({displayMessages : false});
         },
         false
     );
@@ -70,6 +80,8 @@ class App extends Component {
     this.eventSource.addEventListener(
         "Join",
         (event) => {
+            this.setState({reconnecting : false});
+            this.setState({displayUsers : true});
             var data = JSON.parse(event.data);
             this.addUser(data.user);
             this.setState(prevState => ({messages: prevState.messages.concat(this.formatDate(data["created"]) + " JOIN: " + data.user)}));
@@ -80,6 +92,8 @@ class App extends Component {
     this.eventSource.addEventListener(
         "Message",
         (event) => {
+            this.setState({reconnecting : false});
+            this.setState({displayUsers : true});
             var data = JSON.parse(event.data);
             this.setState(prevState => ({messages: prevState.messages.concat(this.formatDate(data["created"]) + " (" + data.user + ") " + data.message)}));
         },
@@ -89,6 +103,8 @@ class App extends Component {
     this.eventSource.addEventListener(
         "Part",
         (event) => {
+            this.setState({reconnecting : false});
+            this.setState({displayUsers : true});
             var data = JSON.parse(event.data);
             this.deleteUser(data.user);
             this.setState(prevState => ({messages: prevState.messages.concat(this.formatDate(data["created"]) + " PART: " + data.user)}));
@@ -99,6 +115,8 @@ class App extends Component {
     this.eventSource.addEventListener(
         "ServerStatus",
         (event) => {
+            this.setState({reconnecting : false});
+            this.setState({displayUsers : true});
             var data = JSON.parse(event.data);
             this.setState(prevState => ({messages: prevState.messages.concat(this.formatDate(data["created"]) + " STATUS: " + data.status)}));
         },
@@ -109,7 +127,9 @@ class App extends Component {
         "Users",
         (event) => {
             this.setState({displayLogin : false});
-            this.setState({displayUsersMessages : true});
+            this.setState({displayUsers : true});
+            this.setState({displayMessages : true});
+            this.setState({reconnecting : false});
             this.setState({users:JSON.parse(event.data).users});
         },
         false
@@ -119,7 +139,8 @@ class App extends Component {
         "error",
         (event) => {
             //todo: delete user from list?
-            this.setState({displayUsersMessages : false});
+            this.setState({reconnecting : true});
+            this.setState({displayUsers : false});
             if (event.target.readyState === 2) {
                 delete sessionStorage.accessToken;
                 this.setState({displayLogin : true});
@@ -139,8 +160,29 @@ class App extends Component {
                 <br />
                 <h3> Disconnected. </h3>
                 <br/>
-                <LoginForm url = {this.state.url} loggedIn = {this.loggedIn} saveToken = {this.saveToken} startStream = {this.startStream}/>
+                <LoginForm loggedIn = {this.loggedIn} saveToken = {this.saveToken} saveURL = {this.saveURL} startStream = {this.startStream}/>
               </div>);
+    }
+    else if (this.state.reconnecting)
+    {
+      return (
+      <div className="App">
+        <br />
+        <h3> Disconnected, retrying </h3>
+        <br/>
+        <div className = "lists">
+          <div class="col-9">
+            <MessageList displayMessages = {this.state.displayMessages} messages={this.state.messages}/>
+          </div>
+          <div class="col-3">
+            <UserList displayUsers = {this.state.displayUsers} users={this.state.users}/>
+          </div>
+        </div>
+        <hr />
+        <Compose url={this.state.url} token={this.state.token} typeable = {false}/>
+        <br /> <br />
+      </div>
+    );
     }
     return (
       <div className="App">
@@ -149,14 +191,14 @@ class App extends Component {
         <br/>
         <div className = "lists">
           <div class="col-9">
-            <MessageList displayMessages = {this.state.displayUsersMessages} messages={this.state.messages}/>
+            <MessageList displayMessages = {this.state.displayMessages} messages={this.state.messages}/>
           </div>
           <div class="col-3">
-            <UserList displayUsers = {this.state.displayUsersMessages} users={this.state.users}/>
+            <UserList displayUsers = {this.state.displayUsers} users={this.state.users}/>
           </div>
         </div>
         <hr />
-        <Compose url = {this.state.url} token = {this.state.token}/>
+        <Compose url={this.state.url} token={this.state.token} typeable={true}/>
         <br /> <br />
       </div>
     );

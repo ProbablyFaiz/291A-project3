@@ -5,9 +5,9 @@ class LoginForm extends Component {
   constructor(props){
     super(props);
     this.state = {
-      url : props.url,
+      url : "",
       username : "",
-      password : ""
+      password : "",
     }
     this.handleChange = this.handleChange.bind(this);
     this.save = this.save.bind(this);
@@ -20,6 +20,9 @@ class LoginForm extends Component {
     }
     else if (event.target.id === "password") {
       this.setState({password: event.target.value});
+    }
+    else if (event.target.id === "url") {
+      this.setState({url: event.target.value});
     }
   }
 
@@ -43,12 +46,13 @@ class LoginForm extends Component {
       else return response.json();
     })
     .then((data) => {
+      console.log("test");
       this.props.saveToken(data["token"]);
+      this.props.saveURL(this.state.url);
       this.props.loggedIn();
       this.props.startStream();
     })
     .catch((error) => {
-      console.log('error: ' + error);
       this.setState({ requestFailed: true });
     });
   }
@@ -59,6 +63,8 @@ class LoginForm extends Component {
         <div>
           <h2>Login</h2>
           <form method="post" onSubmit={this.save}>
+              <label>URL <br /><input id="url" type="text" onChange={this.handleChange}/></label>
+              <br />
               <label>Username <br /><input id="username" type="text" onChange={this.handleChange}/></label>
               <br />
               <label>Password <br /><input id="password" type="password" onChange={this.handleChange}/></label>
