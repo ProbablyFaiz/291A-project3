@@ -86,16 +86,6 @@ post '/message' do
   status 201
 end
 
-def get_users_event
-  {
-      data: {
-          users: $connected_users.keys,
-          created: Time.now.to_f
-      },
-      event: "Users",
-      id: SecureRandom.uuid
-  }
-end
 
 get '/stream/:token' do
   content_type 'text/event-stream'
@@ -106,8 +96,17 @@ get '/stream/:token' do
     halt 403
   end
   stream(true) do |connection|
-    found_existing_user = $connected_users.key? decoded_username
-    if found_existing_user
+    old_connection = $connected_users[decoded_username]
+    $connected_users[decoded_username] = connection
+    users_event = {
+        data: {
+            users: $connected_users.keys,
+            created: Time.now.to_f
+        },
+        event: "Users",
+        id: SecureRandom.uuid
+    }
+    if !old_connection.nil?
       disconnect_event = {
           data: {
               created: Time.now.to_f
@@ -115,13 +114,10 @@ get '/stream/:token' do
           event: "Disconnect",
           id: SecureRandom.uuid
       }
-      old_connection = $connected_users[decoded_username]
-      $connected_users[decoded_username] = connection
       send_event old_connection, disconnect_event
-      send_event connection, get_users_event
       old_connection.close
+      send_event connection, users_event
     else
-      $connected_users[decoded_username] = connection
       $broadcast_queue << {
           data: {
               user: decoded_username,
@@ -130,7 +126,7 @@ get '/stream/:token' do
           event: "Join",
           id: SecureRandom.uuid
       }
-      $broadcast_queue << get_users_event
+      $broadcast_queue << users_event
     end
     send_new_client_events(connection)
     connection.callback { handle_user_disconnect(decoded_username, connection) }
@@ -150,7 +146,6 @@ def send_new_client_events(connection)
 end
 
 def handle_user_disconnect(decoded_username, connection)
-  puts "I am disconnecting #{decoded_username}"
   if $connected_users[decoded_username] == connection
     $broadcast_queue << {
         data: {
