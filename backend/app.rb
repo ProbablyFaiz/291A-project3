@@ -86,6 +86,17 @@ post '/message' do
   status 201
 end
 
+def get_users_event
+  {
+      data: {
+          users: $connected_users.keys,
+          created: Time.now.to_f
+      },
+      event: "Users",
+      id: SecureRandom.uuid
+  }
+end
+
 get '/stream/:token' do
   content_type 'text/event-stream'
   decoded_username = ""
@@ -94,41 +105,23 @@ get '/stream/:token' do
   rescue
     halt 403
   end
-  found_existing_user = $connected_users.key? decoded_username
-  if found_existing_user
-    disconnect_event = {
-        data: {
-            created: Time.now.to_f
-        },
-        event: "Disconnect",
-        id: SecureRandom.uuid
-    }
-    send_event $connected_users[decoded_username], disconnect_event
-  end
   stream(true) do |connection|
-    $connected_users[decoded_username] = connection
-    starting_message_reached = request.env["HTTP_LAST_EVENT_ID"].nil?
-    $events.select do |event|
-      if event[:id] == request.env["HTTP_LAST_EVENT_ID"]
-        starting_message_reached = true
-        next false
-      end
-      starting_message_reached && NEW_CONNECTION_EVENT_TYPES.include?(event[:event])
-    end.each { |event| send_event connection, event, false }
-    connection.callback do
-      unless found_existing_user
-        $broadcast_queue << {
-            data: {
-                user: decoded_username,
-                created: Time.now.to_f
-            },
-            event: "Part",
-            id: SecureRandom.uuid
-        }
-      end
-      $connected_users.delete(decoded_username)
-    end
-    unless found_existing_user
+    found_existing_user = $connected_users.key? decoded_username
+    if found_existing_user
+      disconnect_event = {
+          data: {
+              created: Time.now.to_f
+          },
+          event: "Disconnect",
+          id: SecureRandom.uuid
+      }
+      old_connection = $connected_users[decoded_username]
+      $connected_users[decoded_username] = connection
+      send_event old_connection, disconnect_event
+      send_event connection, get_users_event
+      old_connection.close
+    else
+      $connected_users[decoded_username] = connection
       $broadcast_queue << {
           data: {
               user: decoded_username,
@@ -137,16 +130,37 @@ get '/stream/:token' do
           event: "Join",
           id: SecureRandom.uuid
       }
-      $broadcast_queue << {
-          data: {
-              users: $connected_users.keys,
-              created: Time.now.to_f
-          },
-          event: "Users",
-          id: SecureRandom.uuid
-      }
+      $broadcast_queue << get_users_event
     end
+    send_new_client_events(connection)
+    connection.callback { handle_user_disconnect(decoded_username, connection) }
     status 200
+  end
+end
+
+def send_new_client_events(connection)
+  starting_message_reached = request.env["HTTP_LAST_EVENT_ID"].nil?
+  $events.select do |event|
+    if event[:id] == request.env["HTTP_LAST_EVENT_ID"]
+      starting_message_reached = true
+      next false
+    end
+    starting_message_reached && NEW_CONNECTION_EVENT_TYPES.include?(event[:event])
+  end.each { |event| send_event connection, event, false }
+end
+
+def handle_user_disconnect(decoded_username, connection)
+  puts "I am disconnecting #{decoded_username}"
+  if $connected_users[decoded_username] == connection
+    $broadcast_queue << {
+        data: {
+            user: decoded_username,
+            created: Time.now.to_f
+        },
+        event: "Part",
+        id: SecureRandom.uuid
+    }
+    $connected_users.delete(decoded_username)
   end
 end
 
